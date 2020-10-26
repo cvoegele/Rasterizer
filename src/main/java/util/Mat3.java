@@ -1,4 +1,4 @@
-/*
+package util;/*
  * Copyright (c) 2013 - 2016 Stefan Muller Arisona, Simon Schubiger
  * Copyright (c) 2013 - 2016 FHNW & ETH Zurich
  * All rights reserved.
@@ -30,7 +30,7 @@
  */
 
 /**
- * 3x3 matrix for dealing with OpenGL 3x3 matrices (column major). Mat3 is
+ * 3x3 matrix for dealing with OpenGL 3x3 matrices (column major). util.Mat3 is
  * immutable.
  */
 public final class Mat3 {

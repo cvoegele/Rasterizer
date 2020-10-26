@@ -1,4 +1,4 @@
-/*
+package util;/*
  * Copyright (c) 2013 - 2016 Stefan Muller Arisona, Simon Schubiger
  * Copyright (c) 2013 - 2016 FHNW & ETH Zurich
  * All rights reserved.
