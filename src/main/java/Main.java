@@ -13,16 +13,16 @@ public class Main extends Application {
 
     public static void main(String[] args) {
 
-        Vec3[] vertices = new Vec3[]{
-                new Vec3(-1, -1, -1),
-                new Vec3(+1, -1, -1),
-                new Vec3(+1, +1, -1),
-                new Vec3(-1, +1, -1),
+        Vertex[] vertices = new Vertex[]{
+                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0)), // 0
+                new Vertex(new Vec3(+1, -1, -1), new Vec3(255, 0, 0)), // 1
+                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255)), // 2
+                new Vertex(new Vec3(-1, +1, -1), new Vec3(0, 0, 255)), // 3
 
-                new Vec3(-1, -1, +1),
-                new Vec3(+1, -1, +1),
-                new Vec3(+1, +1, +1),
-                new Vec3(-1, +1, +1)
+                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0)), // 4
+                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 255, 0)), // 5
+                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0)), // 6
+                new Vertex(new Vec3(-1, +1, +1),  new Vec3(255, 0, 0)) // 7
         };
 
         Vec3[] indexes = new Vec3[]{
@@ -47,7 +47,7 @@ public class Main extends Application {
                 0f, 0f, 1f, 0f).transpose();
 
 
-        renderView = new RenderView(width,height, vertices, p, indexes);
+        renderView = new RenderView(width, height, vertices, p, indexes);
         launch(args);
     }
 

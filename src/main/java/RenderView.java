@@ -39,7 +39,7 @@ public class RenderView implements FrameListener {
      *  @param width of rendered image
      * @param height of rendered image
      */
-    public RenderView(int width, int height, Vec3[] vertices, Mat4 p, Vec3[] indexes) {
+    public RenderView(int width, int height, Vertex[] vertices, Mat4 p, Vec3[] indexes) {
 
         this.width = width;
         this.height = height;

@@ -8,7 +8,11 @@ import java.awt.*;
 
 public class Rasterizer {
 
-    private final Vec3[] vertices;
+    private Vec3 light = new Vec3(-1.5, -1.5, -1.5);
+    private final Vec3 N = new Vec3(0, 0, -1);
+    private final Vec3 lightColor = new Vec3(1, 1, 1);
+
+    private final Vertex[] vertices;
     private final Mat4 p;
     private final Vec3[] indexes;
 
@@ -16,7 +20,7 @@ public class Rasterizer {
 
     private final Mat4 v = Mat4.translate(new Vec3(0, 0, 5));
 
-    public Rasterizer(Vec3[] vertices, Mat4 p, Vec3[] indexes, ObservableImage image) {
+    public Rasterizer(Vertex[] vertices, Mat4 p, Vec3[] indexes, ObservableImage image) {
         this.vertices = vertices;
         this.p = p;
         this.indexes = indexes;
@@ -26,43 +30,47 @@ public class Rasterizer {
 
     public void paint() {
 
-        var vertices2D = new Vec2[vertices.length];
-        var verticesCopy = new Vec3[vertices.length];
+        var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
 
-
-        var angle = ((System.currentTimeMillis() / 10 % 360));
         //model matrix
-        var m = Mat4.rotate((float) angle, new Vec3(1, 1, 1));
+        var m = Mat4.rotate(angle, new Vec3(0, 1, 1));
         //var m = Mat4.ID;
 
         var mvp = p.postMultiply(v).postMultiply(m);
 
-        for (int i = 0, verticesCopyLength = vertices.length; i < verticesCopyLength; i++) {
+        var nm = m.inverse().transpose();
+        var mNormal = Mat4.scale(nm.determinant());
 
-            var vertex3 = vertices[i];
-            var vertexTransformed = mvp.transform(new Vec4(vertex3.x, vertex3.y, vertex3.z, 1));
+        for (int i = 0; i < vertices.length; i++) {
+
+            var vObjectCoordinates = vertices[i].objectCoordinates;
+            var vertexTransformed = mvp.transform(new Vec4(vObjectCoordinates.x, vObjectCoordinates.y, vObjectCoordinates.z, 1));
             //normalize by homogeneous component
             vertexTransformed = vertexTransformed.scale(1 / vertexTransformed.w);
-            verticesCopy[i] = new Vec3(vertexTransformed.x, vertexTransformed.y, vertexTransformed.z);
-            vertices2D[i] = new Vec2(vertexTransformed.x, vertexTransformed.y);
 
+            vertices[i].worldCoordinates = new Vec3(vertexTransformed.x, vertexTransformed.y, vertexTransformed.z);
+            vertices[i].screenPosition = new Vec2(vertexTransformed.x, vertexTransformed.y);
         }
-
 
         for (Vec3 index : indexes) {
 
-            var a3 = verticesCopy[(int) index.x];
-            var b3 = verticesCopy[(int) index.y];
-            var c3 = verticesCopy[(int) index.z];
+            var a = vertices[(int) index.x];
+            var b = vertices[(int) index.y];
+            var c = vertices[(int) index.z];
 
-            if (drawTriangle(a3, b3, c3)) {
+            var nA = calculateNormal(a, b, c);
+            a.normal = nA;
+            a.worldNormal = mNormal.transform(nA);
+            var nB = calculateNormal(b, c, a);
+            b.normal = nB;
+            b.worldNormal = mNormal.transform(nB);
+            var nC = calculateNormal(c, a, b);
+            c.normal = nC;
+            c.worldNormal = mNormal.transform(nC);
 
-                var a = vertices2D[(int) index.x];
-                var b = vertices2D[(int) index.y];
-                var c = vertices2D[(int) index.z];
-
+            if (nA.dot(N) < 0)
                 drawTriangle(a, b, c);
-            }
+
         }
 
         image.notifyListenersOfFinishedFrame();
@@ -71,11 +79,15 @@ public class Rasterizer {
     /**
      * draw triangle with already mapped 2d coordinates
      *
-     * @param a
-     * @param b
-     * @param c
+     * @param aa
+     * @param bb
+     * @param cc
      */
-    private void drawTriangle(Vec2 a, Vec2 b, Vec2 c) {
+    private void drawTriangle(Vertex aa, Vertex bb, Vertex cc) {
+
+        var a = aa.screenPosition;
+        var b = bb.screenPosition;
+        var c = cc.screenPosition;
 
         var ab = b.subtract(a);
         var ac = c.subtract(a);
@@ -93,23 +105,84 @@ public class Rasterizer {
                 var u = uv.x;
                 var v = uv.y;
 
+
                 if (u >= 0 && v >= 0 && (u + v) < 1) {
-                    image.setPixel(x, y, new Vec3(255, 0, 0));
+                    var hitPoint = aa.objectCoordinates;
+                    hitPoint = hitPoint.add(bb.objectCoordinates.subtract(aa.objectCoordinates).scale(u));
+                    hitPoint = hitPoint.add(cc.objectCoordinates.subtract(aa.objectCoordinates).scale(v));
+                    var lightDistance = hitPoint.subtract(light);
+                    var interpolatedNormal = interpolateNormal(aa, bb, cc, u, v);
+                    interpolatedNormal = interpolatedNormal.normalize();
+
+                    //TODO: How to add up these different light? Does the shading even do anything?
+                    //calc diffuse color
+                    var interpolatedColor = interpolateColor(aa, bb, cc, u, v);
+                    var diffuse = interpolatedColor.scale(interpolatedNormal.dot(lightDistance));
+
+                    var light = interpolatedNormal.dot(lightDistance) > 0 ? diffuse : interpolatedColor;
+
+                    //TODO:Why is my highlight in one corner?
+                    //calc specular Highlight
+                    var r = interpolatedNormal.scale(lightDistance.dot(interpolatedNormal) * 2).subtract(lightDistance);
+                    var k = 100;
+                    var rr = r.normalize().dot(N.subtract(hitPoint));
+                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
+
+                    light = interpolatedNormal.dot(lightDistance) > 0 && rr > 0 ? light.add(specularLight) : diffuse;
+
+                    image.setPixel(x, y, light.RGBto_sRGB());
                 }
             }
         }
     }
 
+    private Vec3 calculateNormal(Vertex a, Vertex b, Vertex c) {
+        var v1 = b.worldCoordinates.subtract(a.worldCoordinates);
+        var v2 = c.worldCoordinates.subtract(a.worldCoordinates);
+        return v1.cross(v2);
+    }
+
+    private Vec3 interpolateColor(Vertex a, Vertex b, Vertex c, float u, float v) {
+
+        var cColor = c.color.sRGBtoRGB();
+        var aColor = a.color.sRGBtoRGB();
+        var bColor = b.color.sRGBtoRGB();
+
+        var A_ = new Vec4(aColor.x, aColor.y, aColor.z, 1).scale(1 / Math.abs(a.objectCoordinates.z));
+        var B_ = new Vec4(bColor.x, bColor.y, bColor.z, 1).scale(1 / Math.abs(b.objectCoordinates.z));
+        var C_ = new Vec4(cColor.x, cColor.y, cColor.z, 1).scale(1 / Math.abs(c.objectCoordinates.z));
+
+        var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
+        var P = P_.scale(1f / P_.w);
+        return new Vec3(P);
+    }
+
+    private Vec3 interpolateNormal(Vertex a, Vertex b, Vertex c, float u, float v) {
+
+        var cNormal = c.worldNormal;
+        var aNormal = a.worldNormal;
+        var bNormal = b.worldNormal;
+
+        var A_ = new Vec4(aNormal.x, aNormal.y, aNormal.z, 1).scale(1 / a.objectCoordinates.z);
+        var B_ = new Vec4(bNormal.x, bNormal.y, bNormal.z, 1).scale(1 / b.objectCoordinates.z);
+        var C_ = new Vec4(cNormal.x, cNormal.y, cNormal.z, 1).scale(1 / c.objectCoordinates.z);
+
+        var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
+        var P = P_.scale(1f / P_.w);
+        return new Vec3(P);
+    }
+
     /**
      * backface culling on triangle
+     *
      * @param a Side of triangle
      * @param b Side of triangle
      * @param c Side of triangle
      * @return true if should be drawn or false if not
      */
-    private boolean drawTriangle(Vec3 a, Vec3 b, Vec3 c) {
-        var v1 = b.subtract(a);
-        var v2 = c.subtract(a);
+    private boolean canBeSeen(Vertex a, Vertex b, Vertex c) {
+        var v1 = b.worldCoordinates.subtract(a.worldCoordinates);
+        var v2 = c.worldCoordinates.subtract(a.worldCoordinates);
         var n = v1.cross(v2);
         var N = new Vec3(0, 0, -1);
         return n.dot(N) < 0;

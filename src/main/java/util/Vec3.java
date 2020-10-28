@@ -182,4 +182,26 @@ public final class Vec3 {
                 MathUtilities.clamp((int) y, 0, 255),
                 MathUtilities.clamp((int) z, 0, 255));
     }
+
+    private final double gamma = 2.2;
+
+    public Vec3 sRGBtoRGB() {
+        double R1, G1, B1;
+
+        R1 = Math.pow(x / 255d, gamma);
+        G1 = Math.pow(y / 255d, gamma);
+        B1 = Math.pow(z / 255d, gamma);
+
+        return new Vec3(R1, G1, B1);
+    }
+
+    public Vec3 RGBto_sRGB() {
+        double sR, sG, sB;
+
+        sR = Math.pow(x, 1 / gamma) * 255;
+        sG = Math.pow(y, 1 / gamma) * 255;
+        sB = Math.pow(z, 1 / gamma) * 255;
+
+        return new Vec3(sR, sG, sB);
+    }
 }
