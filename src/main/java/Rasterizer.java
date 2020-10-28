@@ -30,7 +30,7 @@ public class Rasterizer {
         var verticesCopy = new Vec3[vertices.length];
 
 
-        var angle = ((System.currentTimeMillis() / 100 % 360));
+        var angle = ((System.currentTimeMillis() / 10 % 360));
         //model matrix
         var m = Mat4.rotate((float) angle, new Vec3(1, 1, 1));
         //var m = Mat4.ID;
