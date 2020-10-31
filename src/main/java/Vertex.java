@@ -5,12 +5,14 @@ import util.Vec4;
 public class Vertex {
 
     public Vec3 objectCoordinates;
+    public Vec3 worldCoordinates; //after m
+    public Vec3 viewCoordinates;
+    public Vec3 clippedCoordinates; // after mvp
     public Vec3 color;
-    public Vec4 homogenousColor;
-    public Vec3 worldCoordinates;
+
     public Vec3 normal;
     public Vec3 worldNormal;
-    public Vec2 screenPosition;
+    public Vec2 screenPosition; //clippedCoordinates Vec2
 
     public Vertex(Vec3 objectCoordinates, Vec3 color) {
         this.objectCoordinates = objectCoordinates;

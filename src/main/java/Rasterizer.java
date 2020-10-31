@@ -4,11 +4,9 @@ import util.Vec2;
 import util.Vec3;
 import util.Vec4;
 
-import java.awt.*;
-
 public class Rasterizer {
 
-    private Vec3 light = new Vec3(-1.5, -1.5, -1.5);
+    private Vec3 light = new Vec3(-2, +1.5, -2);
     private final Vec3 N = new Vec3(0, 0, -1);
     private final Vec3 lightColor = new Vec3(1, 1, 1);
 
@@ -19,6 +17,7 @@ public class Rasterizer {
     private final ObservableImage image;
 
     private final Mat4 v = Mat4.translate(new Vec3(0, 0, 5));
+    private Vec3 worldLight;
 
     public Rasterizer(Vertex[] vertices, Mat4 p, Vec3[] indexes, ObservableImage image) {
         this.vertices = vertices;
@@ -35,22 +34,25 @@ public class Rasterizer {
         //model matrix
         var m = Mat4.rotate(angle, new Vec3(0, 1, 1));
         //var m = Mat4.ID;
-
+        var mv = v.postMultiply(m);
         var mvp = p.postMultiply(v).postMultiply(m);
+        for (int i = 0; i < vertices.length; i++) {
+
+            var objectCoordinates = vertices[i].objectCoordinates;
+            vertices[i].worldCoordinates = m.transform(objectCoordinates);
+            vertices[i].viewCoordinates = mv.transform(objectCoordinates);
+
+            var clippedCoordinate = mvp.transform(new Vec4(objectCoordinates.x, objectCoordinates.y, objectCoordinates.z, 1));
+            //normalize by homogeneous component
+            clippedCoordinate = clippedCoordinate.scale(1 / clippedCoordinate.w);
+
+            vertices[i].clippedCoordinates = new Vec3(clippedCoordinate.x, clippedCoordinate.y, clippedCoordinate.z);
+            vertices[i].screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
+        }
 
         var nm = m.inverse().transpose();
         var mNormal = Mat4.scale(nm.determinant());
-
-        for (int i = 0; i < vertices.length; i++) {
-
-            var vObjectCoordinates = vertices[i].objectCoordinates;
-            var vertexTransformed = mvp.transform(new Vec4(vObjectCoordinates.x, vObjectCoordinates.y, vObjectCoordinates.z, 1));
-            //normalize by homogeneous component
-            vertexTransformed = vertexTransformed.scale(1 / vertexTransformed.w);
-
-            vertices[i].worldCoordinates = new Vec3(vertexTransformed.x, vertexTransformed.y, vertexTransformed.z);
-            vertices[i].screenPosition = new Vec2(vertexTransformed.x, vertexTransformed.y);
-        }
+        worldLight = light;
 
         for (Vec3 index : indexes) {
 
@@ -58,17 +60,17 @@ public class Rasterizer {
             var b = vertices[(int) index.y];
             var c = vertices[(int) index.z];
 
-            var nA = calculateNormal(a, b, c);
+            var nA = calculateNormal(a, c, b);
             a.normal = nA;
             a.worldNormal = mNormal.transform(nA);
-            var nB = calculateNormal(b, c, a);
+            var nB = calculateNormal(b, a, c);
             b.normal = nB;
             b.worldNormal = mNormal.transform(nB);
-            var nC = calculateNormal(c, a, b);
+            var nC = calculateNormal(c, b, c);
             c.normal = nC;
             c.worldNormal = mNormal.transform(nC);
 
-            if (nA.dot(N) < 0)
+            if (canBeSeen(a, b, c))
                 drawTriangle(a, b, c);
 
         }
@@ -107,10 +109,9 @@ public class Rasterizer {
 
 
                 if (u >= 0 && v >= 0 && (u + v) < 1) {
-                    var hitPoint = aa.objectCoordinates;
-                    hitPoint = hitPoint.add(bb.objectCoordinates.subtract(aa.objectCoordinates).scale(u));
-                    hitPoint = hitPoint.add(cc.objectCoordinates.subtract(aa.objectCoordinates).scale(v));
-                    var lightDistance = hitPoint.subtract(light);
+                    var hitPoint = interpolateHitPoint(aa, bb, cc, u, v);
+                    var lightDistance = worldLight.subtract(hitPoint).normalize();
+
                     var interpolatedNormal = interpolateNormal(aa, bb, cc, u, v);
                     interpolatedNormal = interpolatedNormal.normalize();
 
@@ -119,18 +120,25 @@ public class Rasterizer {
                     var interpolatedColor = interpolateColor(aa, bb, cc, u, v);
                     var diffuse = interpolatedColor.scale(interpolatedNormal.dot(lightDistance));
 
-                    var light = interpolatedNormal.dot(lightDistance) > 0 ? diffuse : interpolatedColor;
+                    Vec3 color = Vec3.ZERO;
+                    if (interpolatedNormal.dot(lightDistance) > 0) {
+                        color = color.add(diffuse);
+                    }
 
                     //TODO:Why is my highlight in one corner?
                     //calc specular Highlight
-                    var r = interpolatedNormal.scale(lightDistance.dot(interpolatedNormal) * 2).subtract(lightDistance);
-                    var k = 100;
-                    var rr = r.normalize().dot(N.subtract(hitPoint));
-                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
+//                    var r = interpolatedNormal.scale(lightDistance.dot(interpolatedNormal) * 2).subtract(lightDistance);
+//                    var k = 100;
+//                    var rr = r.normalize().dot(N.subtract(hitPoint));
+//                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
+//
+//                    if (interpolatedNormal.dot(lightDistance) > 0 && rr > 0){
+//                        color = color.add(specularLight);
+//                    }
 
-                    light = interpolatedNormal.dot(lightDistance) > 0 && rr > 0 ? light.add(specularLight) : diffuse;
-
-                    image.setPixel(x, y, light.RGBto_sRGB());
+//                    image.setPixel(x, y, interpolatedNormal.scale(0.5f).add(new Vec3(0.5, 0.5, 0.5)).RGBto_sRGB());
+//                    image.setPixel(x, y, color.RGBto_sRGB());
+                    image.setPixel(x, y, interpolatedColor.RGBto_sRGB());
                 }
             }
         }
@@ -142,15 +150,33 @@ public class Rasterizer {
         return v1.cross(v2);
     }
 
+    private Vec3 interpolateHitPoint(Vertex a, Vertex b, Vertex c, float u, float v) {
+
+        var aWorld = a.worldCoordinates;
+        var bWorld = b.worldCoordinates;
+        var cWorld = c.worldCoordinates;
+
+        var A_ = new Vec4(aWorld.x, aWorld.y, aWorld.z, 1).scale(1 / a.viewCoordinates.z);
+        var B_ = new Vec4(bWorld.x, bWorld.y, bWorld.z, 1).scale(1 / b.viewCoordinates.z);
+        var C_ = new Vec4(cWorld.x, cWorld.y, cWorld.z, 1).scale(1 / c.viewCoordinates.z);
+
+        var hitPoint = A_;
+        hitPoint = hitPoint.add(B_.subtract(A_).scale(u));
+        hitPoint = hitPoint.add(B_.subtract(C_).scale(v));
+
+        var P = hitPoint.scale(1f / hitPoint.w);
+        return new Vec3(P);
+    }
+
     private Vec3 interpolateColor(Vertex a, Vertex b, Vertex c, float u, float v) {
 
         var cColor = c.color.sRGBtoRGB();
         var aColor = a.color.sRGBtoRGB();
         var bColor = b.color.sRGBtoRGB();
 
-        var A_ = new Vec4(aColor.x, aColor.y, aColor.z, 1).scale(1 / Math.abs(a.objectCoordinates.z));
-        var B_ = new Vec4(bColor.x, bColor.y, bColor.z, 1).scale(1 / Math.abs(b.objectCoordinates.z));
-        var C_ = new Vec4(cColor.x, cColor.y, cColor.z, 1).scale(1 / Math.abs(c.objectCoordinates.z));
+        var A_ = new Vec4(aColor.x, aColor.y, aColor.z, 1).scale(1f / a.viewCoordinates.z);
+        var B_ = new Vec4(bColor.x, bColor.y, bColor.z, 1).scale(1f / b.viewCoordinates.z);
+        var C_ = new Vec4(cColor.x, cColor.y, cColor.z, 1).scale(1f / c.viewCoordinates.z);
 
         var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
         var P = P_.scale(1f / P_.w);
@@ -163,9 +189,9 @@ public class Rasterizer {
         var aNormal = a.worldNormal;
         var bNormal = b.worldNormal;
 
-        var A_ = new Vec4(aNormal.x, aNormal.y, aNormal.z, 1).scale(1 / a.objectCoordinates.z);
-        var B_ = new Vec4(bNormal.x, bNormal.y, bNormal.z, 1).scale(1 / b.objectCoordinates.z);
-        var C_ = new Vec4(cNormal.x, cNormal.y, cNormal.z, 1).scale(1 / c.objectCoordinates.z);
+        var A_ = new Vec4(aNormal.x, aNormal.y, aNormal.z, 1).scale(1 / a.viewCoordinates.z);
+        var B_ = new Vec4(bNormal.x, bNormal.y, bNormal.z, 1).scale(1 / b.viewCoordinates.z);
+        var C_ = new Vec4(cNormal.x, cNormal.y, cNormal.z, 1).scale(1 / c.viewCoordinates.z);
 
         var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
         var P = P_.scale(1f / P_.w);
@@ -181,8 +207,8 @@ public class Rasterizer {
      * @return true if should be drawn or false if not
      */
     private boolean canBeSeen(Vertex a, Vertex b, Vertex c) {
-        var v1 = b.worldCoordinates.subtract(a.worldCoordinates);
-        var v2 = c.worldCoordinates.subtract(a.worldCoordinates);
+        var v1 = b.clippedCoordinates.subtract(a.clippedCoordinates);
+        var v2 = c.clippedCoordinates.subtract(a.clippedCoordinates);
         var n = v1.cross(v2);
         var N = new Vec3(0, 0, -1);
         return n.dot(N) < 0;
