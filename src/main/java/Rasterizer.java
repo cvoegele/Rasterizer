@@ -6,8 +6,8 @@ import util.Vec4;
 
 public class Rasterizer {
 
-    private Vec3 light = new Vec3(-2, +1.5, -2);
-    private final Vec3 N = new Vec3(0, 0, -1);
+    private Vec3 light = new Vec3(-20, -20, -20);
+    private Vec3 E = new Vec3(0, 0, -5);
     private final Vec3 lightColor = new Vec3(1, 1, 1);
 
     private final Vertex[] vertices;
@@ -17,7 +17,7 @@ public class Rasterizer {
     private final ObservableImage image;
 
     private final Mat4 v = Mat4.translate(new Vec3(0, 0, 5));
-    private Vec3 worldLight;
+    private Vec3 viewLight;
 
     public Rasterizer(Vertex[] vertices, Mat4 p, Vec3[] indexes, ObservableImage image) {
         this.vertices = vertices;
@@ -33,7 +33,7 @@ public class Rasterizer {
 
         //model matrix
         var m = Mat4.rotate(angle, new Vec3(0, 1, 1));
-        //var m = Mat4.ID;
+//        var m = Mat4.ID;
         var mv = v.postMultiply(m);
         var mvp = p.postMultiply(v).postMultiply(m);
         for (int i = 0; i < vertices.length; i++) {
@@ -50,9 +50,12 @@ public class Rasterizer {
             vertices[i].screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
         }
 
-        var nm = m.inverse().transpose();
-        var mNormal = Mat4.scale(nm.determinant());
-        worldLight = light;
+
+        var scaleMatrix = Mat4.scale(m.determinant());
+        var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
+
+        //viewLight = v.transform(light);
+        //E = v.transform(E);
 
         for (Vec3 index : indexes) {
 
@@ -63,10 +66,10 @@ public class Rasterizer {
             var nA = calculateNormal(a, c, b);
             a.normal = nA;
             a.worldNormal = mNormal.transform(nA);
-            var nB = calculateNormal(b, a, c);
+            var nB = calculateNormal(a, c, b);
             b.normal = nB;
             b.worldNormal = mNormal.transform(nB);
-            var nC = calculateNormal(c, b, c);
+            var nC = calculateNormal(a, c, b);
             c.normal = nC;
             c.worldNormal = mNormal.transform(nC);
 
@@ -81,15 +84,15 @@ public class Rasterizer {
     /**
      * draw triangle with already mapped 2d coordinates
      *
-     * @param aa
-     * @param bb
-     * @param cc
+     * @param A
+     * @param B
+     * @param C
      */
-    private void drawTriangle(Vertex aa, Vertex bb, Vertex cc) {
+    private void drawTriangle(Vertex A, Vertex B, Vertex C) {
 
-        var a = aa.screenPosition;
-        var b = bb.screenPosition;
-        var c = cc.screenPosition;
+        var a = A.screenPosition;
+        var b = B.screenPosition;
+        var c = C.screenPosition;
 
         var ab = b.subtract(a);
         var ac = c.subtract(a);
@@ -107,95 +110,84 @@ public class Rasterizer {
                 var u = uv.x;
                 var v = uv.y;
 
-
                 if (u >= 0 && v >= 0 && (u + v) < 1) {
-                    var hitPoint = interpolateHitPoint(aa, bb, cc, u, v);
-                    var lightDistance = worldLight.subtract(hitPoint).normalize();
+                    var hitPoint = interpolate(A.worldCoordinates,
+                            B.worldCoordinates,
+                            C.worldCoordinates,
+                            u,
+                            v,
+                            A.viewCoordinates.z,
+                            B.viewCoordinates.z,
+                            C.viewCoordinates.z);
 
-                    var interpolatedNormal = interpolateNormal(aa, bb, cc, u, v);
-                    interpolatedNormal = interpolatedNormal.normalize();
+                    var pToLight = light.subtract(hitPoint).normalize();
+                    var pToEye = E.subtract(hitPoint).normalize();
 
-                    //TODO: How to add up these different light? Does the shading even do anything?
+                    var interpolatedNormal = interpolate(A.worldNormal,
+                            B.worldNormal,
+                            C.worldNormal,
+                            u,
+                            v,
+                            A.viewCoordinates.z,
+                            B.viewCoordinates.z,
+                            C.viewCoordinates.z);
+
                     //calc diffuse color
-                    var interpolatedColor = interpolateColor(aa, bb, cc, u, v);
-                    var diffuse = interpolatedColor.scale(interpolatedNormal.dot(lightDistance));
+                    var interpolatedColor = interpolate(A.color.sRGBtoRGB(),
+                            B.color.sRGBtoRGB(),
+                            C.color.sRGBtoRGB(),
+                            u,
+                            v,
+                            A.viewCoordinates.z,
+                            B.viewCoordinates.z,
+                            C.viewCoordinates.z);
+
+                    var diffuse = interpolatedColor.scale(interpolatedNormal.dot(pToLight));
 
                     Vec3 color = Vec3.ZERO;
-                    if (interpolatedNormal.dot(lightDistance) > 0) {
+                    if (interpolatedNormal.dot(pToLight) > 0) {
                         color = color.add(diffuse);
                     }
 
-                    //TODO:Why is my highlight in one corner?
                     //calc specular Highlight
-//                    var r = interpolatedNormal.scale(lightDistance.dot(interpolatedNormal) * 2).subtract(lightDistance);
-//                    var k = 100;
-//                    var rr = r.normalize().dot(N.subtract(hitPoint));
-//                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
-//
-//                    if (interpolatedNormal.dot(lightDistance) > 0 && rr > 0){
-//                        color = color.add(specularLight);
-//                    }
+
+
+                    var r = interpolatedNormal.scale(pToLight.dot(interpolatedNormal) * 2).subtract(pToLight);
+                    var k = 10;
+                    var rr = r.normalize().dot(pToEye);
+                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
+
+                    if (interpolatedNormal.dot(pToLight) > 0 && rr > 0) {
+                        color = color.add(specularLight);
+                    }
 
 //                    image.setPixel(x, y, interpolatedNormal.scale(0.5f).add(new Vec3(0.5, 0.5, 0.5)).RGBto_sRGB());
-//                    image.setPixel(x, y, color.RGBto_sRGB());
-                    image.setPixel(x, y, interpolatedColor.RGBto_sRGB());
+                    image.setPixel(x, y, color.RGBto_sRGB());
+                    //image.setPixel(x, y, interpolatedColor.RGBto_sRGB());
+//                    image.setPixel(x, y, hitPoint.RGBto_sRGB());
                 }
             }
         }
     }
 
     private Vec3 calculateNormal(Vertex a, Vertex b, Vertex c) {
-        var v1 = b.worldCoordinates.subtract(a.worldCoordinates);
-        var v2 = c.worldCoordinates.subtract(a.worldCoordinates);
+        var v1 = b.objectCoordinates.subtract(a.objectCoordinates);
+        var v2 = c.objectCoordinates.subtract(a.objectCoordinates);
         return v1.cross(v2);
     }
 
-    private Vec3 interpolateHitPoint(Vertex a, Vertex b, Vertex c, float u, float v) {
+    private Vec3 interpolate(Vec3 a, Vec3 b, Vec3 c, float u, float v, float scalingFactorA, float scalingFactorB, float scalingFactorC) {
 
-        var aWorld = a.worldCoordinates;
-        var bWorld = b.worldCoordinates;
-        var cWorld = c.worldCoordinates;
+        var A_ = new Vec4(a.x, a.y, a.z, 1).scale(1/scalingFactorA);
+        var B_ = new Vec4(b.x, b.y, b.z, 1).scale(1/scalingFactorB);
+        var C_ = new Vec4(c.x, c.y, c.z, 1).scale(1/scalingFactorC);
 
-        var A_ = new Vec4(aWorld.x, aWorld.y, aWorld.z, 1).scale(1 / a.viewCoordinates.z);
-        var B_ = new Vec4(bWorld.x, bWorld.y, bWorld.z, 1).scale(1 / b.viewCoordinates.z);
-        var C_ = new Vec4(cWorld.x, cWorld.y, cWorld.z, 1).scale(1 / c.viewCoordinates.z);
+        var interpolated = A_;
+        interpolated = interpolated.add(B_.subtract(A_).scale(u));
+        interpolated = interpolated.add(C_.subtract(A_).scale(v));
 
-        var hitPoint = A_;
-        hitPoint = hitPoint.add(B_.subtract(A_).scale(u));
-        hitPoint = hitPoint.add(B_.subtract(C_).scale(v));
-
-        var P = hitPoint.scale(1f / hitPoint.w);
-        return new Vec3(P);
-    }
-
-    private Vec3 interpolateColor(Vertex a, Vertex b, Vertex c, float u, float v) {
-
-        var cColor = c.color.sRGBtoRGB();
-        var aColor = a.color.sRGBtoRGB();
-        var bColor = b.color.sRGBtoRGB();
-
-        var A_ = new Vec4(aColor.x, aColor.y, aColor.z, 1).scale(1f / a.viewCoordinates.z);
-        var B_ = new Vec4(bColor.x, bColor.y, bColor.z, 1).scale(1f / b.viewCoordinates.z);
-        var C_ = new Vec4(cColor.x, cColor.y, cColor.z, 1).scale(1f / c.viewCoordinates.z);
-
-        var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
-        var P = P_.scale(1f / P_.w);
-        return new Vec3(P);
-    }
-
-    private Vec3 interpolateNormal(Vertex a, Vertex b, Vertex c, float u, float v) {
-
-        var cNormal = c.worldNormal;
-        var aNormal = a.worldNormal;
-        var bNormal = b.worldNormal;
-
-        var A_ = new Vec4(aNormal.x, aNormal.y, aNormal.z, 1).scale(1 / a.viewCoordinates.z);
-        var B_ = new Vec4(bNormal.x, bNormal.y, bNormal.z, 1).scale(1 / b.viewCoordinates.z);
-        var C_ = new Vec4(cNormal.x, cNormal.y, cNormal.z, 1).scale(1 / c.viewCoordinates.z);
-
-        var P_ = A_.add(B_.subtract(A_).scale(u)).add(C_.subtract(A_).scale(v));
-        var P = P_.scale(1f / P_.w);
-        return new Vec3(P);
+        var P = interpolated.scale(1f / interpolated.w);
+        return new Vec3(P).normalize();
     }
 
     /**
