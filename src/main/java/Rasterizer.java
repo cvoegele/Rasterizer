@@ -7,78 +7,85 @@ import util.Vec4;
 public class Rasterizer {
 
     private Vec3 light = new Vec3(-20, -20, -20);
-    private Vec3 E = new Vec3(0, 0, -5);
+    private Vec3 E;
     private final Vec3 lightColor = new Vec3(1, 1, 1);
 
-    private final Vertex[] vertices;
     private final Mat4 p;
-    private final Vec3[] indexes;
+    private final ObservableImage frame;
+    private float[][] zBuffer;
+    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 7));
+    private final Mesh[] meshes;
 
-    private final ObservableImage image;
 
-    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 5));
-    private Vec3 viewLight;
-
-    public Rasterizer(Vertex[] vertices, Mat4 p, Vec3[] indexes, ObservableImage image) {
-        this.vertices = vertices;
+    public Rasterizer(Mat4 p, Mesh[] meshes, ObservableImage frame) {
         this.p = p;
-        this.indexes = indexes;
-        this.image = image;
+        this.frame = frame;
+        E = v.inverse().transform(Vec3.ZERO);
+        this.meshes = meshes;
+
+        zBuffer = new float[frame.getHeight()][frame.getWidth()];
+        for (int y = 0; y < frame.getHeight(); y++) {
+            for (int x = 0; x < frame.getWidth(); x++) {
+                zBuffer[y][x] = Float.MAX_VALUE;
+            }
+        }
     }
 
 
     public void paint() {
 
-        var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+        for (var mesh : meshes) {
+            var vertices = mesh.getVertices();
+            var indexes = mesh.getIndexes();
+            var m = mesh.getM();
 
-        //model matrix
-        var m = Mat4.rotate(angle, new Vec3(0, 1, 1));
-//        var m = Mat4.ID;
-        var mv = v.postMultiply(m);
-        var mvp = p.postMultiply(v).postMultiply(m);
-        for (int i = 0; i < vertices.length; i++) {
+            var mv = v.postMultiply(m);
+            var mvp = p.postMultiply(v).postMultiply(m);
+            for (Vertex vertex : vertices) {
 
-            var objectCoordinates = vertices[i].objectCoordinates;
-            vertices[i].worldCoordinates = m.transform(objectCoordinates);
-            vertices[i].viewCoordinates = mv.transform(objectCoordinates);
+                var objectCoordinates = vertex.objectCoordinates;
+                vertex.worldCoordinates = m.transform(objectCoordinates);
+                vertex.viewCoordinates = mv.transform(objectCoordinates);
 
-            var clippedCoordinate = mvp.transform(new Vec4(objectCoordinates.x, objectCoordinates.y, objectCoordinates.z, 1));
-            //normalize by homogeneous component
-            clippedCoordinate = clippedCoordinate.scale(1 / clippedCoordinate.w);
+                var clippedCoordinate = mvp.transform(new Vec4(objectCoordinates.x, objectCoordinates.y, objectCoordinates.z, 1));
+                //normalize by homogeneous component
+                clippedCoordinate = clippedCoordinate.scale(1 / clippedCoordinate.w);
 
-            vertices[i].clippedCoordinates = new Vec3(clippedCoordinate.x, clippedCoordinate.y, clippedCoordinate.z);
-            vertices[i].screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
+                vertex.clippedCoordinates = new Vec3(clippedCoordinate.x, clippedCoordinate.y, clippedCoordinate.z);
+                vertex.screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
+            }
+
+            var scaleMatrix = Mat4.scale(m.determinant());
+            var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
+
+            for (Vec3 index : indexes) {
+
+                var a = vertices[(int) index.x];
+                var b = vertices[(int) index.y];
+                var c = vertices[(int) index.z];
+
+                var nA = calculateNormal(a, c, b);
+                a.normal = nA;
+                a.worldNormal = mNormal.transform(nA);
+                var nB = calculateNormal(a, c, b);
+                b.normal = nB;
+                b.worldNormal = mNormal.transform(nB);
+                var nC = calculateNormal(a, c, b);
+                c.normal = nC;
+                c.worldNormal = mNormal.transform(nC);
+
+                if (canBeSeen(a, b, c))
+                    drawTriangle(a, b, c);
+
+            }
         }
-
-
-        var scaleMatrix = Mat4.scale(m.determinant());
-        var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
-
-        //viewLight = v.transform(light);
-        //E = v.transform(E);
-
-        for (Vec3 index : indexes) {
-
-            var a = vertices[(int) index.x];
-            var b = vertices[(int) index.y];
-            var c = vertices[(int) index.z];
-
-            var nA = calculateNormal(a, c, b);
-            a.normal = nA;
-            a.worldNormal = mNormal.transform(nA);
-            var nB = calculateNormal(a, c, b);
-            b.normal = nB;
-            b.worldNormal = mNormal.transform(nB);
-            var nC = calculateNormal(a, c, b);
-            c.normal = nC;
-            c.worldNormal = mNormal.transform(nC);
-
-            if (canBeSeen(a, b, c))
-                drawTriangle(a, b, c);
-
+        frame.notifyListenersOfFinishedFrame();
+        zBuffer = new float[frame.getHeight()][frame.getWidth()];
+        for (int y = 0; y < frame.getHeight(); y++) {
+            for (int x = 0; x < frame.getWidth(); x++) {
+                zBuffer[y][x] = Float.MAX_VALUE;
+            }
         }
-
-        image.notifyListenersOfFinishedFrame();
     }
 
     /**
@@ -101,8 +108,14 @@ public class Rasterizer {
         var left = new Vec2(ac.y, -ab.y).scale(scalingFactor);
         var right = new Vec2(-ac.x, ab.x).scale(scalingFactor);
 
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
+        var xMin = (int) Math.floor(Math.max(0,Math.min(A.screenPosition.x, Math.min(B.screenPosition.x, C.screenPosition.x))));
+        var xMax = (int) Math.ceil(Math.min(frame.getWidth(), Math.max(A.screenPosition.x, Math.max(B.screenPosition.x, C.screenPosition.x))));
+
+        var yMin = (int) Math.floor(Math.max(0,Math.min(A.screenPosition.y, Math.min(B.screenPosition.y, C.screenPosition.y))));
+        var yMax = (int) Math.ceil(Math.min(frame.getHeight(), Math.max(A.screenPosition.y, Math.max(B.screenPosition.y, C.screenPosition.y))));
+
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
                 var p = new Vec2(x, y);
                 var ap = p.subtract(a);
 
@@ -120,51 +133,39 @@ public class Rasterizer {
                             B.viewCoordinates.z,
                             C.viewCoordinates.z);
 
-                    var pToLight = light.subtract(hitPoint).normalize();
-                    var pToEye = E.subtract(hitPoint).normalize();
+                    if (hitPoint.z < zBuffer[y][x]) {
 
-                    var interpolatedNormal = interpolate(A.worldNormal,
-                            B.worldNormal,
-                            C.worldNormal,
-                            u,
-                            v,
-                            A.viewCoordinates.z,
-                            B.viewCoordinates.z,
-                            C.viewCoordinates.z);
+                        var pToLight = light.subtract(hitPoint).normalize();
+                        var pToEye = E.subtract(hitPoint).normalize();
 
-                    //calc diffuse color
-                    var interpolatedColor = interpolate(A.color.sRGBtoRGB(),
-                            B.color.sRGBtoRGB(),
-                            C.color.sRGBtoRGB(),
-                            u,
-                            v,
-                            A.viewCoordinates.z,
-                            B.viewCoordinates.z,
-                            C.viewCoordinates.z);
+                        var interpolatedNormal = interpolate(A.worldNormal,
+                                B.worldNormal,
+                                C.worldNormal,
+                                u,
+                                v,
+                                A.viewCoordinates.z,
+                                B.viewCoordinates.z,
+                                C.viewCoordinates.z);
 
-                    var diffuse = interpolatedColor.scale(interpolatedNormal.dot(pToLight));
+                        //calc diffuse color
+                        var interpolatedColor = interpolate(A.color.sRGBtoRGB(),
+                                B.color.sRGBtoRGB(),
+                                C.color.sRGBtoRGB(),
+                                u,
+                                v,
+                                A.viewCoordinates.z,
+                                B.viewCoordinates.z,
+                                C.viewCoordinates.z);
 
-                    Vec3 color = Vec3.ZERO;
-                    if (interpolatedNormal.dot(pToLight) > 0) {
-                        color = color.add(diffuse);
-                    }
-
-                    //calc specular Highlight
-
-
-                    var r = interpolatedNormal.scale(pToLight.dot(interpolatedNormal) * 2).subtract(pToLight);
-                    var k = 10;
-                    var rr = r.normalize().dot(pToEye);
-                    var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
-
-                    if (interpolatedNormal.dot(pToLight) > 0 && rr > 0) {
-                        color = color.add(specularLight);
-                    }
+                        var color = diffuseLambertShading(interpolatedNormal, pToLight, interpolatedColor).
+                                add(specularPhongHighlight(interpolatedNormal, pToLight, pToEye));
 
 //                    image.setPixel(x, y, interpolatedNormal.scale(0.5f).add(new Vec3(0.5, 0.5, 0.5)).RGBto_sRGB());
-                    image.setPixel(x, y, color.RGBto_sRGB());
-                    //image.setPixel(x, y, interpolatedColor.RGBto_sRGB());
+                        frame.setPixel(x, y, color.RGBto_sRGB());
+                        //image.setPixel(x, y, interpolatedColor.RGBto_sRGB());
 //                    image.setPixel(x, y, hitPoint.RGBto_sRGB());
+                        zBuffer[y][x] = hitPoint.z;
+                    }
                 }
             }
         }
@@ -178,9 +179,9 @@ public class Rasterizer {
 
     private Vec3 interpolate(Vec3 a, Vec3 b, Vec3 c, float u, float v, float scalingFactorA, float scalingFactorB, float scalingFactorC) {
 
-        var A_ = new Vec4(a.x, a.y, a.z, 1).scale(1/scalingFactorA);
-        var B_ = new Vec4(b.x, b.y, b.z, 1).scale(1/scalingFactorB);
-        var C_ = new Vec4(c.x, c.y, c.z, 1).scale(1/scalingFactorC);
+        var A_ = new Vec4(a.x, a.y, a.z, 1).scale(1 / scalingFactorA);
+        var B_ = new Vec4(b.x, b.y, b.z, 1).scale(1 / scalingFactorB);
+        var C_ = new Vec4(c.x, c.y, c.z, 1).scale(1 / scalingFactorC);
 
         var interpolated = A_;
         interpolated = interpolated.add(B_.subtract(A_).scale(u));
@@ -188,6 +189,24 @@ public class Rasterizer {
 
         var P = interpolated.scale(1f / interpolated.w);
         return new Vec3(P).normalize();
+    }
+
+    private Vec3 diffuseLambertShading(Vec3 normalAtPoint, Vec3 pointToLight, Vec3 diffuseColor) {
+        var angle = normalAtPoint.dot(pointToLight);
+        var diffuse = diffuseColor.scale(angle);
+
+        if (angle > 0) return diffuse;
+        return Vec3.ZERO;
+    }
+
+    private Vec3 specularPhongHighlight(Vec3 normalAtPoint, Vec3 pointToLight, Vec3 pointToEye) {
+        var r = normalAtPoint.scale(pointToLight.dot(normalAtPoint) * 2).subtract(pointToLight);
+        var k = 10;
+        var rr = r.normalize().dot(pointToEye);
+        var specularLight = Vec3.ONE.scale((float) Math.pow(rr, k));
+
+        if (normalAtPoint.dot(pointToLight) > 0 && rr > 0) return specularLight;
+        return Vec3.ZERO;
     }
 
     /**

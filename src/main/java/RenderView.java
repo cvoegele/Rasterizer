@@ -39,7 +39,20 @@ public class RenderView implements FrameListener {
      *  @param width of rendered image
      * @param height of rendered image
      */
-    public RenderView(int width, int height, Vertex[] vertices, Mat4 p, Vec3[] indexes) {
+    public RenderView(int width, int height, Mat4 p) {
+
+        var mesh = new Cube(() -> {
+            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+            return Mat4.rotate(angle, new Vec3(0, 1, 1));
+        });
+
+        var mesh1 = new Cube(() -> {
+            var angle = -((System.currentTimeMillis() / 10 % 720) - 360);
+            var translation = Mat4.translate(new Vec3(0, 2, 0));
+            return translation.postMultiply(Mat4.rotate(angle, new Vec3(0, 1, 1)));
+        });
+
+        var meshes = new Mesh[]{mesh, mesh1};
 
         this.width = width;
         this.height = height;
@@ -55,7 +68,7 @@ public class RenderView implements FrameListener {
         view = new ImageView(writableImage);
         writer = writableImage.getPixelWriter();
 
-        var renderer = new Rasterizer(vertices, p, indexes, observableImage);
+        var renderer = new Rasterizer(p, meshes, observableImage);
 
         var t = new Thread(() -> {
             while (true) {
