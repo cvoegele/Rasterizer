@@ -15,6 +15,7 @@ import texture.StandardTexture;
 import util.Mat4;
 import util.Vec3;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /***
@@ -51,18 +52,31 @@ public class RenderView implements FrameListener {
 
         var mesh1 = new Cube(() -> {
             var angle = -((System.currentTimeMillis() / 100 % 720) - 360);
-            //var translation = Mat4.translate(new Vec3(0, 2, 0));
-            return Mat4.rotate(angle, new Vec3(0, 1, 1));
+            var translation = Mat4.translate(new Vec3(0, 2, 0));
+            return translation.postMultiply(Mat4.rotate(angle, new Vec3(0, 1, 1)));
 //            return Mat4.ID;
         });
 
         try {
-            mesh1.setTexture(new StandardTexture("./dirt.png"));
+            mesh1.setTexture(new StandardTexture("./cowQuad.jpg"));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        var meshes = new Mesh[]{ mesh1};
+        Obj teapot = null;
+        try {
+            teapot = new Obj(() -> {
+                var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+                var rot = Mat4.rotate(angle, new Vec3(0, -1, 0));
+                var scale = Mat4.scale(new Vec3(1, 1, 1));
+                return rot.postMultiply(Mat4.rotate(90, new Vec3(1, 0, 0)));
+//                return Mat4.ID;
+            }, "./lucy.obj");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        var meshes = new Mesh[]{teapot};
 
         this.width = width;
         this.height = height;
