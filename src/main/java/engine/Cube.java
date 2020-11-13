@@ -1,10 +1,13 @@
+package engine;
+
 import util.Int3;
-import util.Vec2;
 import util.Vec3;
 
 public class Cube extends Mesh {
-    public Cube(ModelMatrixFunction modelMatrixFunction) {
-        super(modelMatrixFunction);
+    public Cube(ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) {
+        super(modelMatrixFunction, rasterizer);
+
+        name = "Cube";
 
         vertices = new Vertex[]{
                 new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec3(0, 0, 1)), // 0    //0

@@ -1,4 +1,4 @@
-package texture;
+package engine.texture;
 
 import util.Vec2;
 import util.Vec3;

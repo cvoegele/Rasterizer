@@ -1,3 +1,5 @@
+package engine;
+
 import UI.ObservableImage;
 import util.*;
 
@@ -10,15 +12,13 @@ public class Rasterizer {
     private final Mat4 p;
     private final ObservableImage frame;
     private float[][] zBuffer;
-    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 4000));
-    private final Mesh[] meshes;
+    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 15));
 
 
-    public Rasterizer(Mat4 p, Mesh[] meshes, ObservableImage frame) {
+    public Rasterizer(Mat4 p, ObservableImage frame) {
         this.p = p;
         this.frame = frame;
         E = v.inverse().transform(Vec3.ZERO);
-        this.meshes = meshes;
 
         zBuffer = new float[frame.getHeight()][frame.getWidth()];
         for (int y = 0; y < frame.getHeight(); y++) {
@@ -29,56 +29,59 @@ public class Rasterizer {
     }
 
 
-    public void paint() {
 
-        for (var mesh : meshes) {
-            var vertices = mesh.getVertices();
-            var indexes = mesh.getIndexes();
-            var m = mesh.getM();
+    public void paint(Mesh mesh, Mat4 m) {
 
-            var mv = v.postMultiply(m);
-            var mvp = p.postMultiply(v).postMultiply(m);
-            for (Vertex vertex : vertices) {
+        if (mesh.vertices.length == 0) return;
 
-                var objectCoordinates = vertex.objectCoordinates;
-                vertex.worldCoordinates = m.transform(objectCoordinates);
-                vertex.viewCoordinates = mv.transform(objectCoordinates);
+        var vertices = mesh.getVertices();
+        var indexes = mesh.getIndexes();
 
-                var clippedCoordinate = mvp.transform(new Vec4(objectCoordinates.x, objectCoordinates.y, objectCoordinates.z, 1));
-                //normalize by homogeneous component
-                clippedCoordinate = clippedCoordinate.scale(1 / clippedCoordinate.w);
+        var mv = v.postMultiply(m);
+        var mvp = p.postMultiply(v).postMultiply(m);
+        for (Vertex vertex : vertices) {
 
-                vertex.clippedCoordinates = new Vec3(clippedCoordinate.x, clippedCoordinate.y, clippedCoordinate.z);
-                vertex.screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
-            }
+            var objectCoordinates = vertex.objectCoordinates;
+            vertex.worldCoordinates = m.transform(objectCoordinates);
+            vertex.viewCoordinates = mv.transform(objectCoordinates);
 
-            var scaleMatrix = Mat4.scale(m.determinant());
-            var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
+            var clippedCoordinate = mvp.transform(new Vec4(objectCoordinates.x, objectCoordinates.y, objectCoordinates.z, 1));
+            //normalize by homogeneous component
+            clippedCoordinate = clippedCoordinate.scale(1 / clippedCoordinate.w);
 
-            for (Int3 index : indexes) {
+            vertex.clippedCoordinates = new Vec3(clippedCoordinate.x, clippedCoordinate.y, clippedCoordinate.z);
+            vertex.screenPosition = new Vec2(clippedCoordinate.x, clippedCoordinate.y);
+        }
 
-                var a = vertices[index.i0];
-                var b = vertices[index.i1];
-                var c = vertices[index.i2];
+        var scaleMatrix = Mat4.scale(m.determinant());
+        var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
 
-                var nA = calculateNormal(a, c, b);
-                a.normal = nA;
-                a.worldNormal = mNormal.transform(nA);
-                var nB = calculateNormal(a, c, b);
-                b.normal = nB;
-                b.worldNormal = mNormal.transform(nB);
-                var nC = calculateNormal(a, c, b);
-                c.normal = nC;
-                c.worldNormal = mNormal.transform(nC);
+        for (Int3 index : indexes) {
 
-                if (mesh instanceof Obj) {
+            var a = vertices[index.i0];
+            var b = vertices[index.i1];
+            var c = vertices[index.i2];
+
+            var nA = calculateNormal(a, c, b);
+            a.normal = nA;
+            a.worldNormal = mNormal.transform(nA);
+            var nB = calculateNormal(a, c, b);
+            b.normal = nB;
+            b.worldNormal = mNormal.transform(nB);
+            var nC = calculateNormal(a, c, b);
+            c.normal = nC;
+            c.worldNormal = mNormal.transform(nC);
+
+            if (mesh instanceof Obj) {
+                drawTriangle(a, b, c, mesh);
+            } else {
+                if (canBeSeen(a, b, c))
                     drawTriangle(a, b, c, mesh);
-                } else {
-                    if (canBeSeen(a, b, c))
-                        drawTriangle(a, b, c, mesh);
-                }
             }
         }
+    }
+
+    public void frameFinished() {
         frame.notifyListenersOfFinishedFrame();
         zBuffer = new float[frame.getHeight()][frame.getWidth()];
         for (int y = 0; y < frame.getHeight(); y++) {

@@ -1,4 +1,4 @@
-package texture;
+package engine.texture;
 
 import util.MathUtilities;
 import util.Vec2;
@@ -22,7 +22,7 @@ public abstract class AbstractBitmapTexture {
         height = texture.getHeight();
         image = new Vec3[height][width];
 
-        //gamma correct texture
+        //gamma correct engine.texture
         for (int v = 0; v < height; v++) {
             for (int u = 0; u < width; u++) {
                 int color = texture.getRGB(u, v);

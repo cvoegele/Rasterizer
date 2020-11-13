@@ -1,3 +1,5 @@
+package engine;
+
 import util.Mat4;
 
 public interface ModelMatrixFunction {
