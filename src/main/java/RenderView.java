@@ -67,14 +67,16 @@ public class RenderView implements FrameListener {
         try {
             teapot = new Obj(() -> {
                 var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
-                var rot = Mat4.rotate(angle, new Vec3(0, 1, 1));
-                return rot.postMultiply(Mat4.rotate(180, new Vec3(1, 0, 0)));
-            }, "./teapot.obj");
+                var rot = Mat4.rotate(angle, new Vec3(0, -1, 0));
+                var scale = Mat4.scale(new Vec3(1, 1, 1));
+                return rot.postMultiply(Mat4.rotate(90, new Vec3(1, 0, 0)));
+//                return Mat4.ID;
+            }, "./lucy.obj");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
 
-        var meshes = new Mesh[]{teapot, mesh1};
+        var meshes = new Mesh[]{teapot};
 
         this.width = width;
         this.height = height;
