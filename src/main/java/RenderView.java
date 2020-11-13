@@ -5,13 +5,16 @@ import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
-import texture.StandardTexture;
+import engine.Cube;
+import engine.Obj;
+import engine.Rasterizer;
+import engine.RootSceneElement;
+import engine.texture.StandardTexture;
 import util.Mat4;
 import util.Vec3;
 
@@ -61,7 +64,7 @@ public class RenderView implements FrameListener {
 
         var renderer = new Rasterizer(p, observableImage);
 
-        //        var mesh = new Cube(() -> {
+        //        var mesh = new meshes.Cube(() -> {
 //            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
 //            return Mat4.rotate(angle, new Vec3(0, 1, 1));
 //        });

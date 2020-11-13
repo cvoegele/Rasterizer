@@ -1,6 +1,6 @@
-import javafx.scene.Scene;
-import texture.AbstractBitmapTexture;
-import texture.ITextureMapper;
+package engine;
+
+import engine.texture.ITextureMapper;
 import util.Int3;
 import util.Mat4;
 import util.Vec2;
@@ -11,8 +11,8 @@ import java.util.List;
 
 public abstract class Mesh implements SceneElement {
 
-    Vertex[] vertices;
-    Int3[] indexes;
+    public Vertex[] vertices;
+    public Int3[] indexes;
     ITextureMapper texture;
     private boolean hasTexture;
     private final ModelMatrixFunction modelMatrixFunction;

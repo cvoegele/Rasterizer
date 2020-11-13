@@ -1,6 +1,6 @@
+package engine;
+
 import util.Int3;
-import util.Mat4;
-import util.Vec2;
 import util.Vec3;
 
 public class Cube extends Mesh {
