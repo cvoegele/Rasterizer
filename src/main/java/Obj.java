@@ -11,8 +11,8 @@ import java.util.Scanner;
 
 public class Obj extends Mesh {
 
-    public Obj(ModelMatrixFunction modelMatrixFunction, String path) throws FileNotFoundException {
-        super(modelMatrixFunction);
+    public Obj(String path, ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) throws FileNotFoundException {
+        super(modelMatrixFunction, rasterizer);
         Scanner scanner = new Scanner(new File("./src/main/resources/" + path));
         List<Vertex> vertices = new ArrayList<>();
         List<Int3> indexes = new ArrayList<>();

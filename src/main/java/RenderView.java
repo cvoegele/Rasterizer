@@ -45,39 +45,6 @@ public class RenderView implements FrameListener {
      */
     public RenderView(int width, int height, Mat4 p) {
 
-//        var mesh = new Cube(() -> {
-//            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
-//            return Mat4.rotate(angle, new Vec3(0, 1, 1));
-//        });
-
-        var mesh1 = new Cube(() -> {
-            var angle = -((System.currentTimeMillis() / 100 % 720) - 360);
-            var translation = Mat4.translate(new Vec3(0, 2, 0));
-            return translation.postMultiply(Mat4.rotate(angle, new Vec3(0, 1, 1)));
-//            return Mat4.ID;
-        });
-
-        try {
-            mesh1.setTexture(new StandardTexture("./cowQuad.jpg"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Obj teapot = null;
-        try {
-            teapot = new Obj(() -> {
-                var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
-                var rot = Mat4.rotate(angle, new Vec3(0, -1, 0));
-                var scale = Mat4.scale(new Vec3(1, 1, 1));
-                return rot.postMultiply(Mat4.rotate(90, new Vec3(1, 0, 0)));
-//                return Mat4.ID;
-            }, "./lucy.obj");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        var meshes = new Mesh[]{teapot};
-
         this.width = width;
         this.height = height;
         this.fpsField = new Label();
@@ -92,13 +59,49 @@ public class RenderView implements FrameListener {
         view = new ImageView(writableImage);
         writer = writableImage.getPixelWriter();
 
-        var renderer = new Rasterizer(p, meshes, observableImage);
+        var renderer = new Rasterizer(p, observableImage);
+
+        //        var mesh = new Cube(() -> {
+//            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+//            return Mat4.rotate(angle, new Vec3(0, 1, 1));
+//        });
+
+        var mesh1 = new Cube(() -> {
+            var angle = -((System.currentTimeMillis() / 10 % 720) - 360);
+            var translation = Mat4.translate(new Vec3(0, 0, 0));
+            return translation.postMultiply(Mat4.rotate(angle, new Vec3(0, 1, 1)));
+//            return Mat4.ID;
+        }, renderer);
+
+        try {
+            mesh1.setTexture(new StandardTexture("./cowQuad.jpg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Obj teapot = null;
+        try {
+            teapot = new Obj("./lucy.obj", () -> {
+                var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+                var rot = Mat4.rotate(angle, new Vec3(0, -1, 0));
+                var translate = Mat4.translate(new Vec3(0, 0, 0));
+                var scale = Mat4.scale(0.01f,0.01f,0.01f);
+                return rot.preMultiply(scale.preMultiply(translate));
+//                return Mat4.ID;
+            }, renderer);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        var root = new RootSceneElement(renderer);
+        root.addChild(mesh1);
+        mesh1.addChild(teapot);
 
         var t = new Thread(() -> {
             while (true) {
                 var start = System.currentTimeMillis();
 
-                renderer.paint();
+                root.paint(Mat4.ID);
 
                 var frameTime = System.currentTimeMillis() - start;
                 Platform.runLater(() -> fps.setValue(String.format("FPS: %.0f", 1_000d / frameTime)));
