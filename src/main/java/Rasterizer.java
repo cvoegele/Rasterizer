@@ -13,7 +13,7 @@ public class Rasterizer {
     private final Mat4 p;
     private final ObservableImage frame;
     private float[][] zBuffer;
-    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 7));
+    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 4));
     private final Mesh[] meshes;
 
 
@@ -75,7 +75,7 @@ public class Rasterizer {
                 c.worldNormal = mNormal.transform(nC);
 
                 if (canBeSeen(a, b, c))
-                    drawTriangle(a, b, c);
+                    drawTriangle(a, b, c, mesh);
 
             }
         }
@@ -95,7 +95,7 @@ public class Rasterizer {
      * @param B
      * @param C
      */
-    private void drawTriangle(Vertex A, Vertex B, Vertex C) {
+    private void drawTriangle(Vertex A, Vertex B, Vertex C, Mesh mesh) {
 
         var a = A.screenPosition;
         var b = B.screenPosition;
@@ -108,10 +108,10 @@ public class Rasterizer {
         var left = new Vec2(ac.y, -ab.y).scale(scalingFactor);
         var right = new Vec2(-ac.x, ab.x).scale(scalingFactor);
 
-        var xMin = (int) Math.floor(Math.max(0,Math.min(A.screenPosition.x, Math.min(B.screenPosition.x, C.screenPosition.x))));
+        var xMin = (int) Math.floor(Math.max(0, Math.min(A.screenPosition.x, Math.min(B.screenPosition.x, C.screenPosition.x))));
         var xMax = (int) Math.ceil(Math.min(frame.getWidth(), Math.max(A.screenPosition.x, Math.max(B.screenPosition.x, C.screenPosition.x))));
 
-        var yMin = (int) Math.floor(Math.max(0,Math.min(A.screenPosition.y, Math.min(B.screenPosition.y, C.screenPosition.y))));
+        var yMin = (int) Math.floor(Math.max(0, Math.min(A.screenPosition.y, Math.min(B.screenPosition.y, C.screenPosition.y))));
         var yMax = (int) Math.ceil(Math.min(frame.getHeight(), Math.max(A.screenPosition.y, Math.max(B.screenPosition.y, C.screenPosition.y))));
 
         for (int y = yMin; y < yMax; y++) {
@@ -138,7 +138,8 @@ public class Rasterizer {
                         var pToLight = light.subtract(hitPoint).normalize();
                         var pToEye = E.subtract(hitPoint).normalize();
 
-                        var interpolatedNormal = interpolate(A.worldNormal,
+                        var interpolatedNormal = interpolate(
+                                A.worldNormal,
                                 B.worldNormal,
                                 C.worldNormal,
                                 u,
@@ -147,17 +148,35 @@ public class Rasterizer {
                                 B.viewCoordinates.z,
                                 C.viewCoordinates.z);
 
-                        //calc diffuse color
-                        var interpolatedColor = interpolate(A.color.sRGBtoRGB(),
-                                B.color.sRGBtoRGB(),
-                                C.color.sRGBtoRGB(),
-                                u,
-                                v,
-                                A.viewCoordinates.z,
-                                B.viewCoordinates.z,
-                                C.viewCoordinates.z);
+                        Vec3 albedo;
 
-                        var color = diffuseLambertShading(interpolatedNormal, pToLight, interpolatedColor).
+                        if (mesh.isTextured()) {
+                            var interpolatedTextureCoordinates = interpolateNoNormalize(
+                                    A.texturePosition,
+                                    B.texturePosition,
+                                    C.texturePosition,
+                                    u,
+                                    v,
+                                    A.viewCoordinates.z,
+                                    B.viewCoordinates.z,
+                                    C.viewCoordinates.z);
+
+                            albedo = mesh.colorAtPoint(new Vec2(interpolatedTextureCoordinates.x, interpolatedTextureCoordinates.y));
+
+                        } else {
+
+                            //calc diffuse color
+                            albedo = interpolate(A.color.sRGBtoRGB(),
+                                    B.color.sRGBtoRGB(),
+                                    C.color.sRGBtoRGB(),
+                                    u,
+                                    v,
+                                    A.viewCoordinates.z,
+                                    B.viewCoordinates.z,
+                                    C.viewCoordinates.z);
+                        }
+
+                        var color = diffuseLambertShading(interpolatedNormal, pToLight, albedo).
                                 add(specularPhongHighlight(interpolatedNormal, pToLight, pToEye));
 
 //                    image.setPixel(x, y, interpolatedNormal.scale(0.5f).add(new Vec3(0.5, 0.5, 0.5)).RGBto_sRGB());
@@ -189,6 +208,20 @@ public class Rasterizer {
 
         var P = interpolated.scale(1f / interpolated.w);
         return new Vec3(P).normalize();
+    }
+
+    private Vec3 interpolateNoNormalize(Vec3 a, Vec3 b, Vec3 c, float u, float v, float scalingFactorA, float scalingFactorB, float scalingFactorC) {
+
+        var A_ = new Vec4(a.x, a.y, a.z, 1).scale(1 / scalingFactorA);
+        var B_ = new Vec4(b.x, b.y, b.z, 1).scale(1 / scalingFactorB);
+        var C_ = new Vec4(c.x, c.y, c.z, 1).scale(1 / scalingFactorC);
+
+        var interpolated = A_;
+        interpolated = interpolated.add(B_.subtract(A_).scale(u));
+        interpolated = interpolated.add(C_.subtract(A_).scale(v));
+
+        var P = interpolated.scale(1f / interpolated.w);
+        return new Vec3(P);
     }
 
     private Vec3 diffuseLambertShading(Vec3 normalAtPoint, Vec3 pointToLight, Vec3 diffuseColor) {

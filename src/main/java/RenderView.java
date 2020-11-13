@@ -11,8 +11,11 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
+import texture.StandardTexture;
 import util.Mat4;
 import util.Vec3;
+
+import java.io.IOException;
 
 /***
  * RenderView that creates a SceneRenderer, that then renders the Image with a given RenderEngine
@@ -41,18 +44,25 @@ public class RenderView implements FrameListener {
      */
     public RenderView(int width, int height, Mat4 p) {
 
-        var mesh = new Cube(() -> {
-            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
-            return Mat4.rotate(angle, new Vec3(0, 1, 1));
-        });
+//        var mesh = new Cube(() -> {
+//            var angle = ((System.currentTimeMillis() / 10 % 720) - 360);
+//            return Mat4.rotate(angle, new Vec3(0, 1, 1));
+//        });
 
         var mesh1 = new Cube(() -> {
-            var angle = -((System.currentTimeMillis() / 10 % 720) - 360);
-            var translation = Mat4.translate(new Vec3(0, 2, 0));
-            return translation.postMultiply(Mat4.rotate(angle, new Vec3(0, 1, 1)));
+            var angle = -((System.currentTimeMillis() / 100 % 720) - 360);
+            //var translation = Mat4.translate(new Vec3(0, 2, 0));
+            return Mat4.rotate(angle, new Vec3(0, 1, 1));
+//            return Mat4.ID;
         });
 
-        var meshes = new Mesh[]{mesh, mesh1};
+        try {
+            mesh1.setTexture(new StandardTexture("./dirt.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        var meshes = new Mesh[]{ mesh1};
 
         this.width = width;
         this.height = height;
