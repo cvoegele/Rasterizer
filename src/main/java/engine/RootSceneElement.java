@@ -1,10 +1,18 @@
 package engine;
 
+import main.RenderView;
 import util.Mat4;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.PriorityQueue;
+
 public class RootSceneElement extends Mesh {
-    public RootSceneElement(Rasterizer rasterizer) {
-        super(() -> Mat4.ID, rasterizer);
+
+    public RootSceneElement(RenderView view) {
+        super(() -> Mat4.ID, view.rasterizer);
+        setDepth(0);
+        name = "Root";
     }
 
     @Override
@@ -16,5 +24,23 @@ public class RootSceneElement extends Mesh {
         }
 
         rasterizer.frameFinished();
+    }
+
+    public List<SceneElement> getSceneGraph() {
+
+        var graph = new ArrayList<SceneElement>();
+
+        var q = new ArrayList<SceneElement>();
+        q.add(this);
+        while (!q.isEmpty()) {
+            var node = q.remove(0);
+
+            graph.add(node);
+
+            for (var child : node.getChildren()) {
+                q.add(child);
+            }
+        }
+        return graph;
     }
 }

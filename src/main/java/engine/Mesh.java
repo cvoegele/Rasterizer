@@ -16,13 +16,16 @@ public abstract class Mesh implements SceneElement {
     ITextureMapper texture;
     private boolean hasTexture;
     private final ModelMatrixFunction modelMatrixFunction;
-    final Rasterizer rasterizer;
-    final List<Mesh> children;
+    public final Rasterizer rasterizer;
+    public final List<Mesh> children;
+    private int depth;
+    public String name;
 
     public Mesh(ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) {
         this.modelMatrixFunction = modelMatrixFunction;
         this.rasterizer = rasterizer;
         children = new ArrayList<>();
+        name = "Mesh";
     }
 
     public Vertex[] getVertices() {
@@ -63,10 +66,41 @@ public abstract class Mesh implements SceneElement {
     }
 
     public void addChild(Mesh mesh) {
+        mesh.setDepth(depth + 1);
         children.add(mesh);
     }
 
     public void removeChild(Mesh mesh) {
+        mesh.setDepth(-1);
         children.remove(mesh);
+    }
+
+    public boolean hasChildren() {
+        return children.size() > 0;
+    }
+
+    @Override
+    public SceneElement[] getChildren() {
+        return children.toArray(SceneElement[]::new);
+    }
+
+
+    @Override
+    public void setDepth(int depth) {
+        this.depth = depth;
+    }
+
+    @Override
+    public int getDepth() {
+        return depth;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        result.append(" ".repeat(Math.max(0, depth)));
+        if (depth > 0) result.append(" > ");
+        result.append(name);
+        return result.toString();
     }
 }
