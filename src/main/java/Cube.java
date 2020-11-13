@@ -1,3 +1,4 @@
+import util.Int3;
 import util.Vec2;
 import util.Vec3;
 
@@ -39,19 +40,19 @@ public class Cube extends Mesh {
                 new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec3(0, 0, 1))  // 7    //23
         };
 
-        indexes = new Vec3[]{
-                new Vec3(0, 3, 6),    //top
-                new Vec3(0, 6, 9),
-                new Vec3(21, 18, 15), //bot
-                new Vec3(21, 5, 12),
-                new Vec3(1, 10, 22),  //left
-                new Vec3(1, 22, 13),
-                new Vec3(7, 4, 16),   //right
-                new Vec3(7, 16, 19),
-                new Vec3(11, 8, 20),  //front
-                new Vec3(11, 20, 23),
-                new Vec3(5, 2, 14),   //back
-                new Vec3(5, 14, 17)
+        indexes = new Int3[]{
+                new Int3(0, 3, 6),    //top
+                new Int3(0, 6, 9),
+                new Int3(21, 18, 15), //bot
+                new Int3(21, 5, 12),
+                new Int3(1, 10, 22),  //left
+                new Int3(1, 22, 13),
+                new Int3(7, 4, 16),   //right
+                new Int3(7, 16, 19),
+                new Int3(11, 8, 20),  //front
+                new Int3(11, 20, 23),
+                new Int3(5, 2, 14),   //back
+                new Int3(5, 14, 17)
         };
     }
 }

@@ -1,5 +1,6 @@
 import texture.AbstractBitmapTexture;
 import texture.ITextureMapper;
+import util.Int3;
 import util.Mat4;
 import util.Vec2;
 import util.Vec3;
@@ -7,7 +8,7 @@ import util.Vec3;
 public abstract class Mesh {
 
     Vertex[] vertices;
-    Vec3[] indexes;
+    Int3[] indexes;
     ITextureMapper texture;
     private boolean hasTexture;
     private ModelMatrixFunction modelMatrixFunction;
@@ -20,7 +21,7 @@ public abstract class Mesh {
         return vertices;
     }
 
-    public Vec3[] getIndexes() {
+    public Int3[] getIndexes() {
         return indexes;
     }
 

@@ -1,8 +1,5 @@
 import UI.ObservableImage;
-import util.Mat4;
-import util.Vec2;
-import util.Vec3;
-import util.Vec4;
+import util.*;
 
 public class Rasterizer {
 
@@ -13,7 +10,7 @@ public class Rasterizer {
     private final Mat4 p;
     private final ObservableImage frame;
     private float[][] zBuffer;
-    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 4));
+    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 10));
     private final Mesh[] meshes;
 
 
@@ -58,11 +55,11 @@ public class Rasterizer {
             var scaleMatrix = Mat4.scale(m.determinant());
             var mNormal = m.inverse().transpose().preMultiply(scaleMatrix);
 
-            for (Vec3 index : indexes) {
+            for (Int3 index : indexes) {
 
-                var a = vertices[(int) index.x];
-                var b = vertices[(int) index.y];
-                var c = vertices[(int) index.z];
+                var a = vertices[index.i0];
+                var b = vertices[index.i1];
+                var c = vertices[index.i2];
 
                 var nA = calculateNormal(a, c, b);
                 a.normal = nA;
@@ -74,9 +71,12 @@ public class Rasterizer {
                 c.normal = nC;
                 c.worldNormal = mNormal.transform(nC);
 
-                if (canBeSeen(a, b, c))
+                if (mesh instanceof Obj) {
                     drawTriangle(a, b, c, mesh);
-
+                } else {
+                    if (canBeSeen(a, b, c))
+                        drawTriangle(a, b, c, mesh);
+                }
             }
         }
         frame.notifyListenersOfFinishedFrame();
