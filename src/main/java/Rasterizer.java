@@ -13,7 +13,7 @@ public class Rasterizer {
     private final Mat4 p;
     private final ObservableImage frame;
     private float[][] zBuffer;
-    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 7));
+    private final Mat4 v = Mat4.translate(new Vec3(0, 0, 4));
     private final Mesh[] meshes;
 
 

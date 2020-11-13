@@ -41,11 +41,30 @@ public abstract class AbstractBitmapTexture {
         return sRGB.sRGBtoRGB();
     }
 
-    Vec3 colorAtScaledPosition(Vec2 position) {
-        //System.out.println(position);
-        var u = (int) MathUtilities.clamp((position.y * width) , 0, width - 1);
-        var v = (int) MathUtilities.clamp((position.x * height), 0, height - 1);
 
-        return image[v][u];
+    Vec3 colorAtScaledPosition(Vec2 position) {
+
+        var v = (int) MathUtilities.clamp((position.y * height), 0, height - 1);
+        var u = (int) MathUtilities.clamp((position.x * width), 0, width - 1);
+
+        var uDiff = (position.x * width) - u;
+        var vDiff = (position.y * height) - v;
+        assert (uDiff < 1);
+        assert (vDiff < 1);
+
+        var u1 = MathUtilities.clamp(u + 1, 0, width - 1);
+        var v1 = MathUtilities.clamp(v + 1, 0, height - 1);
+
+        Vec3 uv = image[v][u];
+        Vec3 u1v = image[v][u1];
+        Vec3 uv1 = image[v1][u];
+        Vec3 u1v1 = image[v1][u1];
+
+        Vec3 left = Vec3.lerp(uv, uv1, vDiff);
+        Vec3 right = Vec3.lerp(u1v, u1v1, vDiff);
+        Vec3 result = Vec3.lerp(left, right, uDiff);
+
+        return result;
+//        return image[v][u];
     }
 }
