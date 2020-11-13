@@ -9,13 +9,13 @@ public class Vertex {
     public Vec3 viewCoordinates;
     public Vec3 clippedCoordinates; // after mvp
     public Vec3 color;
-    public Vec2 texturePosition;
+    public Vec3 texturePosition;
 
     public Vec3 normal;
     public Vec3 worldNormal;
     public Vec2 screenPosition; //clippedCoordinates Vec2
 
-    public Vertex(Vec3 objectCoordinates, Vec3 color, Vec2 texturePosition) {
+    public Vertex(Vec3 objectCoordinates, Vec3 color, Vec3 texturePosition) {
         this.texturePosition = texturePosition;
         this.objectCoordinates = objectCoordinates;
         this.color = color;

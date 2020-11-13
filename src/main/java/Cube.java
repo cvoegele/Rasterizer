@@ -6,37 +6,37 @@ public class Cube extends Mesh {
         super(modelMatrixFunction);
 
         vertices = new Vertex[]{
-                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec2(0, 1)), // 0    //0
-                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec2(0, 1)), // 0    //1
-                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec2(1, 1)), // 0    //2
+                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec3(0, 0, 1)), // 0    //0
+                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec3(0, 1, 1)), // 0    //1
+                new Vertex(new Vec3(-1, -1, -1), new Vec3(255, 0, 0), new Vec3(1, 1, 1)), // 0    //2
 
-                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec2(1, 1)), // 1    //3
-                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec2(1, 1)), // 1    //4
-                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec2(0, 1)), // 1    //5
+                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec3(0, 1, 1)), // 1    //3
+                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec3(1, 1, 1)), // 1    //4
+                new Vertex(new Vec3(+1, -1, -1), new Vec3(0, 255, 0), new Vec3(0, 1, 1)), // 1    //5
 
-                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec2(1, 0)), // 2    //6
-                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec2(1, 0)), // 2    //7
-                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec2(1, 1)), // 2    //8
+                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec3(1, 1, 1)), // 2    //6
+                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec3(0, 1, 1)), // 2    //7
+                new Vertex(new Vec3(+1, +1, -1), new Vec3(0, 0, 255), new Vec3(1, 1, 1)), // 2    //8
 
-                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec2(0, 0)), // 3    //9
-                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec2(1, 1)), // 3    //10
-                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec2(0, 1)), // 3    //11
+                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec3(1, 0, 1)), // 3    //9
+                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec3(1, 1, 1)), // 3    //10
+                new Vertex(new Vec3(-1, +1, -1), new Vec3(255, 0, 0), new Vec3(0, 1, 1)), // 3    //11
 
-                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec2(1, 0)), // 4    //12
-                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec2(0, 0)), // 4    //13
-                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec2(1, 0)), // 4    //14
+                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec3(1, 0, 1)), // 4    //12
+                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec3(0, 0, 1)), // 4    //13
+                new Vertex(new Vec3(-1, -1, +1), new Vec3(0, 255, 0), new Vec3(1, 0, 1)), // 4    //14
 
-                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec2(0, 0)), // 5    //15
-                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec2(1, 0)), // 5    //16
-                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec2(0, 0)), // 5    //17
+                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec3(0, 0, 1)), // 5    //15
+                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec3(1, 0, 1)), // 5    //16
+                new Vertex(new Vec3(+1, -1, +1), new Vec3(0, 0, 255), new Vec3(0, 0, 1)), // 5    //17
 
-                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec2(0, 1)), // 6    //18
-                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec2(0, 0)), // 6    //19
-                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec2(1, 0)), // 6    //20
+                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec3(0, 1, 1)), // 6    //18
+                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec3(0, 0, 1)), // 6    //19
+                new Vertex(new Vec3(+1, +1, +1), new Vec3(255, 0, 0), new Vec3(1, 0, 1)), // 6    //20
 
-                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec2(1, 1)), // 7    //21
-                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec2(1, 0)), // 7    //22
-                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec2(0, 0))  // 7    //23
+                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec3(1, 1, 1)), // 7    //21
+                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec3(1, 0, 1)), // 7    //22
+                new Vertex(new Vec3(-1, +1, +1), new Vec3(0, 255, 0), new Vec3(0, 0, 1))  // 7    //23
         };
 
         indexes = new Vec3[]{

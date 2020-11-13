@@ -10,6 +10,7 @@ import java.io.IOException;
 
 public abstract class AbstractBitmapTexture {
 
+    public boolean hasTexture = false;
     private Vec3[][] image;
     private int width;
     private int height;
@@ -28,6 +29,7 @@ public abstract class AbstractBitmapTexture {
                 image[v][u] = colorToRGB(color);
             }
         }
+        hasTexture = true;
     }
 
     private Vec3 colorToRGB(int color) {
@@ -39,9 +41,10 @@ public abstract class AbstractBitmapTexture {
         return sRGB.sRGBtoRGB();
     }
 
-    public Vec3 colorAtScaledPosition(Vec2 position) {
-        var u = (int) MathUtilities.clamp(position.x * width, 0, width - 1);
-        var v = (int) MathUtilities.clamp(position.x * height, 0, height - 1);
+    Vec3 colorAtScaledPosition(Vec2 position) {
+        //System.out.println(position);
+        var u = (int) MathUtilities.clamp((position.y * width) , 0, width - 1);
+        var v = (int) MathUtilities.clamp((position.x * height), 0, height - 1);
 
         return image[v][u];
     }
