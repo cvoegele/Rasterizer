@@ -72,11 +72,12 @@ public class Rasterizer {
             c.normal = nC;
             c.worldNormal = mNormal.transform(nC);
 
-            if (mesh instanceof Obj) {
-                drawTriangle(a, b, c, mesh);
-            } else {
+            //this is mainly to prevent the teapot, from looking strange
+            if (mesh.doBackFaceCulling) {
                 if (canBeSeen(a, b, c))
                     drawTriangle(a, b, c, mesh);
+            } else {
+                drawTriangle(a, b, c, mesh);
             }
         }
     }

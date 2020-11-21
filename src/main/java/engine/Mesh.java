@@ -21,12 +21,18 @@ public abstract class Mesh implements SceneElement {
     public final List<Mesh> children;
     private int depth;
     public String name;
+    public boolean doBackFaceCulling;
 
     public Mesh(ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) {
         this.modelMatrixFunction = modelMatrixFunction;
         this.rasterizer = rasterizer;
         children = new CopyOnWriteArrayList<>();
         name = "Mesh";
+        doBackFaceCulling = true;
+    }
+
+    public void toggleDoBackFaceCulling() {
+       doBackFaceCulling = !doBackFaceCulling;
     }
 
     public Vertex[] getVertices() {

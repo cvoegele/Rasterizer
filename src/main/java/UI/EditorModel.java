@@ -70,6 +70,7 @@ public class EditorModel {
         assert teapot != null;
         parent.addChild(teapot);
         teapot.setName("Teapot");
+        teapot.toggleDoBackFaceCulling();
 
         graph.clear();
         graph.addAll(rootSceneElement.getSceneGraph());
