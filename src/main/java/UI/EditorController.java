@@ -11,6 +11,10 @@ public class EditorController {
     public EditorController(EditorModel model, EditorView view) {
         this.model = model;
         this.view = view;
+
+        view.cubeMenuItem.setOnAction((e) -> {
+            model.addSimpleCube(model.rootSceneElement);
+        });
     }
 
     public void StartRender() {

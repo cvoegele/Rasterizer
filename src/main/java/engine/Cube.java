@@ -47,7 +47,7 @@ public class Cube extends Mesh {
                 new Int3(0, 3, 6),    //top
                 new Int3(0, 6, 9),
                 new Int3(21, 18, 15), //bot
-                new Int3(21, 5, 12),
+                new Int3(21, 15, 12),
                 new Int3(1, 10, 22),  //left
                 new Int3(1, 22, 13),
                 new Int3(7, 4, 16),   //right

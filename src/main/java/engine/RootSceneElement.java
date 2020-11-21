@@ -4,6 +4,7 @@ import main.RenderView;
 import util.Mat4;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -33,13 +34,11 @@ public class RootSceneElement extends Mesh {
         var q = new ArrayList<SceneElement>();
         q.add(this);
         while (!q.isEmpty()) {
-            var node = q.remove(0);
+            var node = q.remove(q.size() -1);
 
             graph.add(node);
 
-            for (var child : node.getChildren()) {
-                q.add(child);
-            }
+            q.addAll(Arrays.asList(node.getChildren()));
         }
         return graph;
     }

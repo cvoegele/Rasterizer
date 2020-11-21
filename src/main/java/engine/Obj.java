@@ -11,8 +11,21 @@ import java.util.Scanner;
 
 public class Obj extends Mesh {
 
-    public Obj(String path, ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) throws FileNotFoundException {
+    private Vec3 color;
+
+    public Vec3 getColor() {
+        return color;
+    }
+
+    public void setColor(Vec3 color) {
+        this.color = color;
+    }
+
+    public Obj(String path, Vec3 color, ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) throws FileNotFoundException {
+
+
         super(modelMatrixFunction, rasterizer);
+        this.color = color;
         Scanner scanner = new Scanner(new File("./src/main/resources/" + path));
         List<Vertex> vertices = new ArrayList<>();
         List<Int3> indexes = new ArrayList<>();
@@ -27,7 +40,7 @@ public class Obj extends Mesh {
                     var x = Float.parseFloat(splits[1]);
                     var y = Float.parseFloat(splits[2]);
                     var z = Float.parseFloat(splits[3]);
-                    vertices.add(new Vertex(new Vec3(x, y, z), new Vec3(128, 0, 0), Vec3.ZERO));
+                    vertices.add(new Vertex(new Vec3(x, y, z), color, Vec3.ZERO));
                 } else if ("f".equals(splits[0])) {
                     var i0 = Integer.parseInt(splits[1]) - 1;
                     var i1 = Integer.parseInt(splits[3]) - 1;

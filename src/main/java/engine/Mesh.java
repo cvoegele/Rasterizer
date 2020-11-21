@@ -8,6 +8,7 @@ import util.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class Mesh implements SceneElement {
 
@@ -24,7 +25,7 @@ public abstract class Mesh implements SceneElement {
     public Mesh(ModelMatrixFunction modelMatrixFunction, Rasterizer rasterizer) {
         this.modelMatrixFunction = modelMatrixFunction;
         this.rasterizer = rasterizer;
-        children = new ArrayList<>();
+        children = new CopyOnWriteArrayList<>();
         name = "Mesh";
     }
 
@@ -84,6 +85,9 @@ public abstract class Mesh implements SceneElement {
         return children.toArray(SceneElement[]::new);
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
 
     @Override
     public void setDepth(int depth) {
@@ -98,8 +102,8 @@ public abstract class Mesh implements SceneElement {
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        result.append(" ".repeat(Math.max(0, depth)));
-        if (depth > 0) result.append(" > ");
+        result.append("    ".repeat(Math.max(0, depth)));
+        if (depth > 0) result.append("   > ");
         result.append(name);
         return result.toString();
     }
